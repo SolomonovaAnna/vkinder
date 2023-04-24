@@ -5,30 +5,26 @@ from config import user, password, db_name
 with psycopg2.connect(user=user, password=password, database=db_name) as conn:
     conn.autocommit = True
 
-
-def create_table_users():  # references users(id_vk)
+# создаем таблицу
+def create_table_users():
 
     with conn.cursor() as cursor:
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS seen_person(
             id SERIAL,
-            id_vk varchar(50) PRIMARY KEY,
-            user_id varchar(50));
+            id_vk varchar(50) PRIMARY KEY);
         """)
 
-
+# добавляем id найденных пользователей
 def insert_data_search(id_vk):
     with conn.cursor() as cursor:
         cursor.execute(
             f"""INSERT INTO seen_person (id_vk) 
            VALUES (%s)""",(id_vk,))
 
-def insert_data_users(user_id):
-    with conn.cursor() as cursor:
-        cursor.execute(
-            f"""INSERT INTO seen_person (user_id) 
-           VALUES (%s)""",(user_id,))
 
+
+# запрашиваем список id найденных пользователей
 def check():
     with conn.cursor() as cursor:
         cursor.execute(
@@ -38,7 +34,7 @@ def check():
         seen_person = cursor.fetchall()
         return seen_person
 
-
+# удаляем таблицу
 def drop_users():
     with conn.cursor() as cursor:
         cursor.execute(
