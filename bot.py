@@ -9,13 +9,13 @@ for event in bot.longpoll.listen():
         res = event.text.lower()
         user_id = event.user_id
         if res == 'поиск':
-            while True:
-                creating_database()
-                bot.get_age(user_id)
-                bot.get_city(user_id)
-                bot.get_sex(user_id)
-                bot.show_found_person(user_id)
+               creating_database() 
+               bot.get_age(user_id)
+               bot.get_city(user_id)
+               bot.get_sex(user_id)
+               bot.users_search(bot.move_offset())
+               bot.show_found_person(user_id)
         else:
             bot.send_msg(user_id, f' Бот готов к поиску, наберите: \n '
                                   f' "Поиск - Поиск людей. \n'
-                                  f' "Далее - просмотр следующей записи в БД.')
+                                  )
