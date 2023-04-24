@@ -3,7 +3,7 @@ import datetime
 import vk_api
 from vk_api.utils import get_random_id
 from config import access_token, comunity_token
-from database import insert_data_users, check, insert_data_search
+from database import check, insert_data_search
 
 
 
@@ -15,6 +15,7 @@ class Bot:
         self.vk_group_got_api = self.vk_group.get_api()
         self.longpoll = VkLongPoll(self.vk_group)
 
+    # функция отправки сообщений, в том числе с медиа вложением
     def send_msg(self, user_id, message, attachment=None):
         self.vk_group_got_api.messages.send(
             user_id=user_id,
@@ -23,18 +24,8 @@ class Bot:
             attachment=attachment
         )
 
-    # def get_profile_id(self, user_id):
-    #     info = self.vk_user_got_api.users.get(
-    #                                    user_id=user_id,
-    #                                    fields='bdate,city,sex'
-    #                                    )
-    #
-    #     for i in info["items"]:
-    #         user_id = int(i['id'])
-    #         insert_data_users(user_id)
-    #     return user_id
 
-
+    # запрашиваем возрастной диапазон для поиска
     def input_age(self, user_id, age):
         global age_from, age_to
         a = age.split("-")
@@ -50,7 +41,8 @@ class Bot:
 
             return 'Неправильный формат ввода возраста'
 
-
+    # ищем пользователей на 2 года старше и младше от возраста юзера, пользующегося ботом.
+    # или юзер вводит интересующий его возрастной интервал
     def get_age(self, user_id):
         global age_from, age_to
         try:
@@ -83,11 +75,12 @@ class Bot:
         except:
             return'Неправильный формат ввода'
 
-
+    # запрашиваем город, в котором будет осуществлен поиск
+    # или бот ищет в городе юзера
     def get_city(self, user_id):
         global city_id, city_title
         self.send_msg(user_id,
-                      f' Введите "Да" и пару будем искать в вашем городе.'
+                      f' Введите "да" и пару будем искать в вашем городе.'
                       f' Или введите название города, например: Москва'
                       )
         for event in self.longpoll.listen():
@@ -114,6 +107,7 @@ class Bot:
                             city_title = answer.capitalize()
                             return f' в городе {city_title}'
 
+    # в зависимости от пола юзера ищем людей противоположного пола
     def get_sex(self, user_id):
         global sex
         info = self.vk_user_got_api.users.get(
@@ -130,7 +124,8 @@ class Bot:
         return sex
 
 
-
+    # ищем пользователей, удовлетворяющих запросам юзера, и сохраняем ссылки на них в список
+    # id  найденных пользователей сохраняем в БД
     def users_search(self, offset=None):
         global list_found_persons
         list_found_persons = []
@@ -154,21 +149,23 @@ class Bot:
         for person in res["items"]:
             if not person["is_closed"]:
                 if "city" in person and person["city"]["id"] == city_id and person["city"]["title"] == city_title:
-                    vk_id = int(person['id'])
-                    # name = str(person['first_name'] + ' ' + person['last_name'])
-                    link = str('vk.com/' + str(person['domain']))
-                    insert_data_search(vk_id)
-                    list_found_persons.append(link)
+                    if not person in check():
+                        vk_id = int(person['id'])
+                        # name = str(person['first_name'] + ' ' + person['last_name'])
+                        link = str('vk.com/' + str(person['domain']))
+                        insert_data_search(vk_id)
+                        list_found_persons.append(link)
 
         return list_found_persons
 
+    # сдвигаем offset для нового списка пользователей
     def move_offset(self):
         global offset
         offset = 0
         offset += 30
         return offset
 
-
+    # возвращает 3 лучших(лайки+комменты) фото найденного пользователя
     def get_photo(self, user_id):
         global attachments
         attachments = []
@@ -198,7 +195,7 @@ class Bot:
         return attachments
 
 
-
+    # запрашиваем из бд id найденных пользователей
     def get_profile_id(self):
         global id_list
         list_person = []
@@ -211,27 +208,12 @@ class Bot:
         return id_list
 
     def show_found_person(self, user_id):
-        for link in self.users_search():
-            for id in self.get_profile_id():
-                self.send_msg(user_id, link, self.get_photo(id))
-
-
-
-        # else:
-        #     self.send_msg(user_id,
-        #                   f'Все анекты ранее были просмотрены. Будет выполнен новый поиск. '
-        #                   f'Измените возраст поиска в формате : 21-35')
-        #     for event in self.longpoll.listen():
-        #         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-        #             age = event.text
-        #             self.input_age(user_id, age)
-        #             self.get_city(user_id)
-        #             self.show_found_person(user_id)
-        #             return
-
-
-
+        for id in self.get_profile_id():
+            link = str('vk.com/id' + str(id))
+            self.send_msg(user_id, link, self.get_photo(id))
 
 
 bot = Bot()
 
+if __name__ == '__main__':
+    bot.show_found_person()
