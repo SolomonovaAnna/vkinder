@@ -9,15 +9,20 @@ if __name__ == '__main__':
             res = event.text.lower()
             user_id = event.user_id
             if res == 'поиск':
-                # while True:
                 creating_database()
-                bot.get_age(user_id)
-                bot.get_city(user_id)
-                bot.get_sex(user_id)
-                bot.users_search(bot.move_offset())
+                bot.get_profile_info(user_id)
+                bot.users_search(offset=0)
                 bot.show_found_person(user_id)
+            elif res == 'далее':
+                bot.users_search(offset=50)
+                bot.show_found_person(user_id)
+            elif res == 'пока':
+                bot.send_msg(user_id, "Спасибо за использование сервиса. Всего доброго!")
+                break
             else:
                 bot.send_msg(user_id, f' Бот готов к поиску, наберите: \n '
-                                      f' "Поиск - Поиск людей. \n'
+                                      f' "Поиск - поиск людей. \n'
+                                      f' "Далее - продолжить поиск. \n'
+                                      f' "Пока - закончить поиск. \n'
                                       )
-
+        
