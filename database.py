@@ -11,8 +11,8 @@ def create_table_users():
     with conn.cursor() as cursor:
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS seen_person(
-            id SERIAL,
-            id_vk varchar(50) PRIMARY KEY);
+            id SERIAL PRIMARY KEY,
+            id_vk varchar(50));
         """)
 
 # добавляем id найденных пользователей
@@ -28,7 +28,7 @@ def insert_data_search(id_vk):
 def check():
     with conn.cursor() as cursor:
         cursor.execute(
-            f"""SELECT sp.id_vk
+            f"""SELECT DISTINCT sp.id_vk
             FROM seen_person AS sp;"""
         )
         seen_person = cursor.fetchall()
@@ -43,7 +43,7 @@ def drop_users():
 
 
 def creating_database():
-    drop_users()
+    # drop_users()
     create_table_users()
 
 
@@ -51,6 +51,3 @@ def creating_database():
 
 if __name__ == '__main__':
     creating_database()
-
-
-
