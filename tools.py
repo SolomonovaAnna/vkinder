@@ -1,9 +1,9 @@
-from vk_api.longpoll import VkLongPoll, VkEventType
+from vk_api.longpoll import VkLongPoll
 import datetime
 import vk_api
 from vk_api.utils import get_random_id
 from config import access_token, comunity_token
-from database import check, insert_data_search
+
 
 
 
@@ -17,8 +17,8 @@ class Bot:
         self.sex = 0
         self.age_from = 0
         self.age_to = 0
-        self.city_id = 0
         self.city_title = 0
+
 
     # функция отправки сообщений, в том числе с медиа вложением
     def send_msg(self, user_id, message, attachment=None):
@@ -35,69 +35,35 @@ class Bot:
                                             user_id=user_id,
                                             fields="bdate,city,sex")
 
-        self.send_msg(user_id,
-                      f' Введите "ок" - будем искать людей в вашем городе и в возрастном диапазон +2 и -2 года'
-                      f' от вашей даты рождения.'
-                      f' Если вы хотите искать по другим параметрам,'
-                      f' то введите свой возрастной диапазон и город для поиска'
-                      f' в формате: 25-29-Москва.'
+        self.city_title = info[0]['city']["title"]
+        date = info[0].get('bdate')
+        year = int(date.split('.')[2])
+        year_now = int(datetime.date.today().year)
+        age = year_now - year
+        self.age_from = age - 2
+        self.age_to = age + 2
+        self.sex = info[0]['sex']
+        if self.sex == 1:
+            self.sex = 2
+        elif self.sex == 2:
+            self.sex = 1
+        else:
+            print("Ошибка!")
 
-                      )
-
-        for i in info:
-            if i['sex'] == 1:
-                self.sex = 2
-            elif i['sex'] == 2:
-                self.sex = 1
-            else:
-                print("Ошибка!")
-
-        for event in self.longpoll.listen():
-            if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-                answer = event.text.lower()
-                if answer == "ок":
-                    self.city_id = info[0]['city']["id"]
-                    self.city_title = info[0]['city']["title"]
-                    date = info[0]['bdate']
-                    date_list = date.split('.')
-                    if len(date_list) == 3:
-                        year = int(date_list[2])
-                        year_now = int(datetime.date.today().year)
-                        age = year_now - year
-                        self.age_from = age - 2
-                        self.age_to = age + 2
-                        return
-                else:
-                    a = answer.split("-")
-                    self.age_from = int(a[0])
-                    self.age_to = int(a[1])
-
-                    cities = self.vk_user_got_api.database.getCities(
-                                country_id=1,
-                                q=answer.capitalize(),
-                                need_all=1,
-                                count=1000
-                        )['items']
-                    for i in cities:
-                        if i["title"] == (a[2]):
-                            self.city_id = i["id"]
-                            self.city_title = int(i[1])
-
-        return
+        return self.city_title, self.sex, self.age_from, self.age_to
 
 
     # ищем пользователей, удовлетворяющих запросам юзера, и сохраняем ссылки на них в список
     # id  найденных пользователей сохраняем в БД
 
-    def users_search(self, offset=None):
-        list_found_persons = []
+    def users_search(self, city_title, sex, age_from, age_to, offset):
+
         res = self.vk_user_got_api.users.search(
-            city=self.city_id,
-            hometown=self.city_title,
-            sex=self.sex,
+            hometown=city_title,
+            sex=sex,
             status=1,
-            age_from=self.age_from,
-            age_to=self.age_to,
+            age_from=age_from,
+            age_to=age_to,
             has_photo=1,
             count=30,
             offset=offset,
@@ -107,15 +73,12 @@ class Bot:
                    "domain, "
         )
 
-
+        list_found_persons = []
         for person in res["items"]:
             if not person["is_closed"]:
-                if "city" in person and person["city"]["id"] == self.city_id and person["city"]["title"] == self.city_title:
-                    vk_id = int(person['id'])
-                    # name = str(person['first_name'] + ' ' + person['last_name'])
-                    link = str('vk.com/' + str(person['domain']))
-                    insert_data_search(vk_id)
-                    list_found_persons.append(link)
+                if "city" in person and person["city"]["title"] == city_title:
+                    list_found_persons.append({'link': str('vk.com/' + str(person['domain'])), 'id': person['id']})
+
 
         return list_found_persons
 
@@ -143,31 +106,21 @@ class Bot:
         photo_ids = []
         for i in top_photo:
             photo_ids.append(i['id'])
-        attachments.append('photo{}_{}'.format(user_id, photo_ids[0]))
-        attachments.append('photo{}_{}'.format(user_id, photo_ids[1]))
-        attachments.append('photo{}_{}'.format(user_id, photo_ids[2]))
-        return attachments
+        try:
+            attachments.append('photo{}_{}'.format(user_id, photo_ids[0]))
+            attachments.append('photo{}_{}'.format(user_id, photo_ids[1]))
+            attachments.append('photo{}_{}'.format(user_id, photo_ids[2]))
+            return attachments
+        except IndexError:
+            try:
+                attachments.append('photo{}_{}'.format(user_id, photo_ids[0]))
+                return attachments
+            except IndexError:
+                return print(f'Нет фото')
 
 
-    # запрашиваем из бд id найденных пользователей
-    def get_profile_id(self):
-        list_person = []
-        id_list = []
-        for i in check():
-            list_person.append(i)
-        for element in range(len(list_person)):
-            list_person[element] = int(list_person[element][0])
-            id_list.append(list_person[element])
-        return id_list
-
-    def show_found_person(self, user_id):
-        for id in self.get_profile_id():
-            link = str('vk.com/id' + str(id))
-            self.send_msg(user_id, link, self.get_photo(id))
+    
 
 
 bot = Bot()
-
-if __name__ == '__main__':
-    bot.show_found_person()
 
