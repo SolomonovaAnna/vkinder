@@ -12,27 +12,29 @@ def create_table_users():
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS seen_person(
             id SERIAL PRIMARY KEY,
-            id_vk varchar(50));
+            id_found INTEGER UNIQUE,
+            user_id INTEGER);
         """)
 
 # добавляем id найденных пользователей
-def insert_data_search(id_vk):
+def insert_data_search(user_id, id_found):
     with conn.cursor() as cursor:
         cursor.execute(
-            f"""INSERT INTO seen_person (id_vk) 
-           VALUES (%s)""",(id_vk,))
+            f"""INSERT INTO seen_person (user_id,id_found) 
+           VALUES (%s, %s)""",(user_id, id_found,))
 
 
 
 # запрашиваем список id найденных пользователей
-def check():
+def check(id_found):
     with conn.cursor() as cursor:
+
         cursor.execute(
-            f"""SELECT DISTINCT sp.id_vk
-            FROM seen_person AS sp;"""
-        )
+            f"""SELECT id_found FROM seen_person AS sp WHERE id_found = %s;""",
+                       (id_found,))
         seen_person = cursor.fetchall()
         return seen_person
+
 
 # удаляем таблицу
 def drop_users():
