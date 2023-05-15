@@ -26,15 +26,15 @@ def insert_data_search(user_id, id_found):
 
 
 # запрашиваем список id найденных пользователей
-def check(id_found):
+
+def check():
     with conn.cursor() as cursor:
 
         cursor.execute(
-            f"""SELECT id_found FROM seen_person AS sp WHERE id_found = %s;""",
-                       (id_found,))
+            f"""SELECT id_found FROM seen_person AS sp;""",
+                       )
         seen_person = cursor.fetchall()
         return seen_person
-
 
 # удаляем таблицу
 def drop_users():
