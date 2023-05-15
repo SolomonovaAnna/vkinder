@@ -77,7 +77,7 @@ class Bot:
         for person in res["items"]:
             if not person["is_closed"]:
                 if "city" in person and person["city"]["title"] == city_title:
-                    list_found_persons.append({'link': str('vk.com/' + str(person['domain'])), 'id': person['id']})
+                    list_found_persons.append({'id': person['id']})
 
 
         return list_found_persons
@@ -119,8 +119,10 @@ class Bot:
                 return print(f'Нет фото')
 
 
-    
+
 
 
 bot = Bot()
 
+if __name__ == '__main__':
+    bot.users_search(bot.city_title, bot.sex, bot.age_from, bot.age_to)
